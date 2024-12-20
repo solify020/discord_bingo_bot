@@ -1,23 +1,53 @@
-const { Client, Collection, Intents } = require('discord.js');
+// Import the discord.js library
+const { Client, GatewayIntentBits, ActionRowBuilder } = require('discord.js');
+const { importWalletButton, createWalletButton } = require('./components/depositMethodButton');
+const { chooseMethod } = require('./controllers/depositMethodController');
 const mongoose = require('mongoose');
+
 require('dotenv').config();
 
+mongoose.connect(process.env.DB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => { console.log('DB Connected'); });
 
-const myIntents = new Intents(32767);
+// Create a new client instance with intents
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ],
+});
 
-const client = new Client({ intents: myIntents, partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
 
+// Ready event - triggered when the bot successfully logs in
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}!`);
+});
 
-client.commands = new Collection();
-client.events = new Collection();
+// Message event - triggered when a message is sent in a guild
+client.on('messageCreate', (message) => {
+    // Ignore messages from bots
+    if (message.author.bot) return;
+    // Simple command
 
-mongoose.connect(process.env.DB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-	.then(async () => {
-		['command_handler', 'event_handler'].forEach(handler => {
-			require(`./handlers/${handler}`)(client);
-		});
-		console.log('Connected to Database.');
-		client.login(process.env.BOT_TOKEN);
+    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
 
-	})
-	.catch((err) => console.log(err));
+    const row = new ActionRowBuilder().addComponents(createWalletButton).addComponents(importWalletButton);
+
+    if (message.content === '!ping') {
+        channel.send({
+            content: 'Choose Deposit Method',
+            components: [row],
+        })
+    }
+});
+
+client.on('interactionCreate', async(interaction) => {
+    if (!interaction.isButton()) return;
+    chooseMethod(interaction)
+});
+
+// Login to Discord with your bot token
+client.login(process.env.BOT_TOKEN);
