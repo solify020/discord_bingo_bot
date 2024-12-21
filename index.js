@@ -1,9 +1,8 @@
 // Import the discord.js library
 const { Client, GatewayIntentBits, ActionRowBuilder } = require('discord.js');
-const { importWalletButton, createWalletButton } = require('./components/depositMethodButton');
-const { chooseMethod } = require('./controllers/depositMethodController');
+const { createWalletButton, checkBalanceButton, playGameButton, showListButton } = require('./components/buttons');
+const { chooseMethod } = require('./controllers/index');
 const mongoose = require('mongoose');
-
 require('dotenv').config();
 
 mongoose.connect(process.env.DB_URL, {
@@ -24,20 +23,27 @@ const client = new Client({
 // Ready event - triggered when the bot successfully logs in
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
+
+    const row = new ActionRowBuilder().addComponents(createWalletButton).addComponents(checkBalanceButton).addComponents(playGameButton).addComponents(showListButton);
+    channel.send({
+        content: 'Choose Deposit Method',
+        components: [row],
+    })
 });
 
 // Message event - triggered when a message is sent in a guild
-client.on('messageCreate', (message) => {
+client.on('messageCreate', async(message) => {
     // Ignore messages from bots
     if (message.author.bot) return;
     // Simple command
 
     const channel = client.channels.cache.get(process.env.CHANNEL_ID);
 
-    const row = new ActionRowBuilder().addComponents(createWalletButton).addComponents(importWalletButton);
+    const row = new ActionRowBuilder().addComponents(createWalletButton);
 
     if (message.content === '!ping') {
-        channel.send({
+        await channel.send({
             content: 'Choose Deposit Method',
             components: [row],
         })
