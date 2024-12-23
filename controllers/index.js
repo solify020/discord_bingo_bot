@@ -1,5 +1,5 @@
 const { createWallet, checkBalance } = require("./depositMethodController");
-const { playGame, startGame, showRoomList, joinRoom, crashRoom } = require('./playGameController')
+const { playGame, startGame, showRoomList, joinRoom, crashRoom, tick } = require('./playGameController')
 
 const chooseMethod = (interaction) => {
     if (!interaction) return interaction.reply("Interaction Error!");
@@ -10,6 +10,7 @@ const chooseMethod = (interaction) => {
     if (interaction.customId === "show_list") return showRoomList(interaction);
     if (interaction.customId.includes("__")) return joinRoom(interaction);
     if (interaction.customId === "crash_room") return crashRoomButton(interaction);
+    if (interaction.customId.includes('card')) return tick(interaction);
 }
 
 module.exports = {

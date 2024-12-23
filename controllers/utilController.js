@@ -17,6 +17,49 @@ const create5x5Table = () => {
     return result;
 }
 
+const bingoCheck = (table) => {
+    // Check for rows
+    for (let row of table) {
+        if (row.every(num => num === 0)) {
+            return true; // Bingo found in a row
+        }
+    }
+
+    // Check for columns
+    for (let i = 0; i < 5; i++) {
+        if (table.every(row => row[i] === 0)) {
+            return true; // Bingo found in a column
+        }
+    }
+
+    // Check the main diagonal (top-left to bottom-right)
+    if (table.every((row, index) => row[index] === 0)) {
+        return true; // Bingo found in the main diagonal
+    }
+
+    // Check the anti-diagonal (top-right to bottom-left)
+    if (table.every((row, index) => row[4 - index] === 0)) {
+        return true; // Bingo found in the anti-diagonal
+    }
+
+    return false; // No Bingo found
+};
+
+const generateBingoBalls = () => {
+    // Create an array with numbers from 1 to 75
+    const numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+
+    // Shuffle the array using the Fisher-Yates (Durstenfeld) shuffle algorithm
+    for (let i = numbers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+    }
+
+    return numbers; // Return the shuffled array of 75 numbers
+};
+
 module.exports = {
-    create5x5Table
+    create5x5Table,
+    bingoCheck,
+    generateBingoBalls
 }

@@ -5,6 +5,10 @@ const roomSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    roomId: {
+        type: String,
+        required: true
+    },
     betAmount: {
         type: Number,
         required: true
