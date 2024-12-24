@@ -8,26 +8,40 @@ const { ball } = require("./constant");
 const playGame = async(interaction) => {
 
     const user = await User.findOne({ userId: interaction.user.id })
-
-    interaction.reply({
+    if (!user) {
+        await interaction.reply({
+            content: "You don't have wallet. Please Create Wallet.",
+            ephemeral: true
+        });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+    await interaction.reply({
         content: `Select Bet Amount. Your balance is ${user.score} SOL.`,
         components: [betAmountButton_1, betAmountButton_2],
         ephemeral: true
     });
+    setTimeout(() => { interaction.deleteReply() }, 10000);
 }
 
 const startGame = async(interaction) => {
     const user = await User.findOne({ userId: interaction.user.id });
     const betAmount = Number(interaction.customId.split('_')[1]);
-    if (user.score < betAmount) return interaction.reply({
-        content: "Insufficient Balance! Please deposit SOL.",
-        ephemeral: true
-    });
-    const room = await Room.findOne({ user_1_id: interaction.user.id, isAvailable: true });
-    if (room) return interaction.reply({
-        content: "You have already created room.",
-        ephemeral: true
-    });
+    if (user.score < betAmount) {
+        await interaction.reply({
+            content: `Insufficient Balance! Please deposit SOL. Wallet Address: ${user.publicKey}`,
+            ephemeral: true
+        });
+        return setTimeout(() => { interaction.deleteReply() }, 5000);
+    }
+    const room = await Room.findOne({ user_1_id: interaction.user.id, isFinished: false });
+    if (room) {
+        await interaction.reply({
+            content: "You have already created room.",
+            ephemeral: true
+        });
+
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
 
     await User.findOneAndUpdate({ userId: interaction.user.id }, { score: user.score - betAmount });
     createRoom(interaction, betAmount);
@@ -66,32 +80,56 @@ const createRoom = async(interaction, betAmount) => {
         content: `Please join the game channel. Click this. ${newGameRoom.url}`,
         ephemeral: true
     })
+    setTimeout(() => { interaction.deleteReply() }, 5000);
 }
 
 const crashRoom = async(interaction) => {
-
+    const room = await Room.findOne({ user_1_id: interaction.user.id, isFinished: false });
+    if (!room) {
+        await interaction.reply({
+            content: "You don't have any room.",
+            ephemeral: true
+        });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+    await Room.findOneAndUpdate({ user_1_id: interaction.user.id }, { isFinished: true });
+    const channel = interaction.guild.channels.cache.get(room.roomId);
+    if (!channel) {
+        return interaction.reply({
+            content: "Game Room not found.",
+            ephemeral: true
+        });
+    }
+    await channel.delete();
+    await interaction.reply({
+        content: "Game Room deleted.",
+        ephemeral: true
+    });
+    setTimeout(() => { interaction.deleteReply() }, 3000);
 }
 
 const joinRoom = async(interaction) => {
-    console.log(interaction);
-    const roomId = interaction.customId.split('__')[0];
-    const betAmount = interaction.customId.split('__')[1];
-    await User.findOneAndUpdate({ userId: interaction.user.id }, {
-        $inc: { score: -betAmount }
-    }, { new: true });
+    const user = await User.findOne({ userId: interaction.user.id });
+    const room = await Room.findOne({ roomId: interaction.customId.split('__')[0] });
 
-    await Room.findOneAndUpdate({
-        roomId: roomId
-    }, {
-        user_2_id: interaction.user.id,
-        isAvailable: false,
-    });
+    if (user.score < room.betAmount) {
+        return interaction.reply({
+            content: "Insufficient Balance! Please deposit SOL.",
+            ephemeral: true
+        });
+    }
 
-    const channel = interaction.guild.channels.cache.get(roomId);
-    if (!channel) return interaction.reply({
-        content: "Game Room not found.",
-        ephemeral: true
-    });
+    await User.findOneAndUpdate({ userId: interaction.user.id }, { $inc: { score: -room.betAmount } });
+    await Room.findOneAndUpdate({ roomId: room.roomId }, { user_2_id: interaction.user.id, isAvailable: false });
+
+    const channel = interaction.guild.channels.cache.get(room.roomId);
+    if (!channel) {
+        await interaction.reply({
+            content: "Game Room not found.",
+            ephemeral: true
+        });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
 
     await channel.permissionOverwrites.edit(interaction.user.id, {
         ViewChannel: true,
@@ -102,7 +140,7 @@ const joinRoom = async(interaction) => {
         content: `You joined the Game Room. Click this ${channel.url}`,
         ephemeral: true
     });
-
+    setTimeout(() => { interaction.deleteReply() }, 5000);
     startBingo(interaction, channel);
 }
 
@@ -112,10 +150,13 @@ const showRoomList = async(interaction) => {
         { $sample: { size: 5 } }
     ]);
 
-    if (!list.length) return interaction.reply({
-        content: "No Bingo Room. Please Create.",
-        ephemeral: true
-    })
+    if (!list.length) {
+        await interaction.reply({
+            content: "No Bingo Room. Please Create.",
+            ephemeral: true
+        })
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
 
     const rooms = await Promise.all(list.map(async(item) => {
         const user = await User.findOne({ userId: item.user_1_id });
@@ -136,9 +177,16 @@ const showRoomList = async(interaction) => {
         components: [row],
         ephemeral: true
     })
+    setTimeout(() => { interaction.deleteReply() }, 10000);
 }
 
 const startBingo = async(interaction, channel) => {
+    const gameRoom = await Room.findOne({ roomId: interaction.customId.split('__')[0] });
+    const player1 = await User.findOne({ userId: gameRoom.user_1_id });
+    const player2 = await User.findOne({ userId: gameRoom.user_2_id });
+    const player1Name = player1.displayName;
+    const player2Name = player2.displayName;
+
     let player1_table = create5x5Table();
     let player2_table = create5x5Table();
     const bingoBalls = generateBingoBalls();
@@ -146,6 +194,7 @@ const startBingo = async(interaction, channel) => {
     const rows_2 = [];
     if (!ball[channel.id]) {
         ball[channel.id] = {}; // Create an object for the channel ID
+        ball[channel.id]['currentBall'] = [];
     }
     player1_table.map((item, index_y) => {
         const row = new ActionRowBuilder();
@@ -175,13 +224,13 @@ const startBingo = async(interaction, channel) => {
     console.log(rows_1);
 
     channel.send({
-        content: "Player 1's Table",
+        content: `${player1Name}'s Table`,
         components: [rows_1[0], rows_1[1], rows_1[2], rows_1[3], rows_1[4]],
     })
     const gameMsg = await channel.send('Game will be started in a second.');
 
     channel.send({
-        content: "Player 2's Table",
+        content: `${player2Name}'s Table`,
         components: [rows_2[0], rows_2[1], rows_2[2], rows_2[3], rows_2[4]],
     })
 
@@ -194,8 +243,11 @@ const startBingo = async(interaction, channel) => {
         var currentBallIndex = 0;
         gameMsg.edit('The game has started. Balls pop out every 5 seconds.');
         const randomBall = setInterval(() => {
-            if (ball[channel.id]['winner']) return clearInterval(randomBall);
-            ball[channel.id]['currentBall'] = bingoBalls[currentBallIndex];
+            if (ball[channel.id]['winner'] || currentBallIndex >= 75) {
+                setTimeout(() => { channel.delete().catch(console.error) }, 3000)
+                return clearInterval(randomBall);
+            }
+            ball[channel.id]['currentBall'].push(bingoBalls[currentBallIndex]);
             gameMsg.edit(bingoBalls[currentBallIndex].toString());
             currentBallIndex++;
         }, 5000);
@@ -203,71 +255,80 @@ const startBingo = async(interaction, channel) => {
 }
 
 const tick = async(interaction) => {
-    console.log(interaction.customId);
-    const channel = interaction.channel;
-    const data = interaction.customId;
-    const index_x = data.split('_')[2];
-    const index_y = data.split('_')[3];
-    const number = data.split('_')[4];
-    if (data.split('_')[1] == '1') {
-        if (number == ball[interaction.channel.id]['currentBall']) {
-            ball[interaction.channel.id]['player1'][index_x][index_y] = 0;
-            const updatedComponents = interaction.message.components.map((actionRow, rowIndex) => {
-                const newRow = new ActionRowBuilder();
-                actionRow.components.forEach((button, colIndex) => {
-                    const updatedButton = ButtonBuilder.from(button);
-
-                    if (rowIndex === parseInt(index_y) && colIndex === parseInt(index_x)) {
-                        // Update the clicked button: set label to "X", disable it
-                        updatedButton.setLabel('X').setStyle(ButtonStyle.Danger).setDisabled(true);
-                    }
-                    newRow.addComponents(updatedButton);
-                });
-                return newRow;
-            });
-
-            // Update the message with the modified components
-            await interaction.update({ components: updatedComponents });
-            if (bingoCheck(ball[interaction.channel.id]['player1'])) {
-                ball[interaction.channel.id]['winner'] = 'player1';
-                channel.send('Bingo! The game has ended. Player 1 is winner!');
-            }
-        }
-    } else {
-        console.log("Player2");
-
-        if (number == ball[interaction.channel.id]['currentBall']) {
-            ball[interaction.channel.id]['player2'][index_x][index_y] = 0;
-            const updatedComponents = interaction.message.components.map((actionRow, rowIndex) => {
-                const newRow = new ActionRowBuilder();
-                actionRow.components.forEach((button, colIndex) => {
-                    const updatedButton = ButtonBuilder.from(button);
-
-                    if (rowIndex === parseInt(index_y) && colIndex === parseInt(index_x)) {
-                        // Update the clicked button: set label to "X", disable it
-                        updatedButton.setLabel('X').setStyle(ButtonStyle.Danger).setDisabled(true);
-                    }
-                    newRow.addComponents(updatedButton);
-                });
-                return newRow;
-            });
-
-            // Update the message with the modified components
-            await interaction.update({ components: updatedComponents });
-            if (bingoCheck(ball[interaction.channel.id]['player2'])) {
-                ball[interaction.channel.id]['winner'] = 'player2';
-                channel.send('Bingo! The game has ended. Player 2 is winner!');
-                console.log("Components", interaction.message.components);
-
-            }
-        }
+    if (!isGameStarted(interaction)) {
+        await interaction.reply({ content: 'Game not started.', ephemeral: true });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
     }
-    channelId = interaction.channel.id;
-}
+    const gameRoom = await Room.findOne({ roomId: interaction.channel.id });
+    const player1 = await User.findOne({ userId: gameRoom.user_1_id });
+    const player2 = await User.findOne({ userId: gameRoom.user_2_id });
 
-const finishBingo = async() => {
+    const player1Name = player1.displayName;
+    const player2Name = player2.displayName;
 
-}
+    const [action, player, x, y, number] = interaction.customId.split('_');
+    const channel = interaction.channel;
+    const currentBall = ball[channel.id]['currentBall'];
+
+    const room = await Room.findOne({ roomId: channel.id });
+    if (!isPlayerTurn(interaction, player, room)) {
+        await interaction.reply({ content: 'You cannot click the other player\'s button.', ephemeral: true });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+
+    if (ball[channel.id]['winner']) {
+        await interaction.reply({ content: 'The game has ended.', ephemeral: true });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+
+    if (!isCorrectNumber(number, currentBall)) {
+        await interaction.reply({ content: 'Incorrect number.', ephemeral: true });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+
+    await updatePlayerTable(interaction, player, x, y);
+
+    if (bingoCheck(ball[channel.id][`player${player}`])) {
+        ball[channel.id]['winner'] = `player${player}`;
+        await channel.send(`Bingo! The game has ended. Player ${player} is the winner!`);
+        await User.findOneAndUpdate({ userId: interaction.user.id }, { $inc: { score: room.betAmount * 1.8 } });
+        setTimeout(() => {
+            channel.delete().catch(console.error);
+        }, 3000);
+    }
+};
+
+const isGameStarted = (interaction) => {
+    return ball[interaction.channel.id] && ball[interaction.channel.id]['currentBall'];
+};
+
+const isPlayerTurn = (interaction, player, room) => {
+    return (player === '1' && interaction.user.id === room.user_1_id) || (player === '2' && interaction.user.id === room.user_2_id);
+};
+
+const isCorrectNumber = (number, currentBall) => {
+    return currentBall.includes(parseInt(number));
+};
+
+const updatePlayerTable = async(interaction, player, x, y) => {
+    const channel = interaction.channel;
+    const playerTable = ball[channel.id][`player${player}`];
+    playerTable[x][y] = 0;
+
+    const updatedComponents = interaction.message.components.map((actionRow, rowIndex) => {
+        const newRow = new ActionRowBuilder();
+        actionRow.components.forEach((button, colIndex) => {
+            const updatedButton = ButtonBuilder.from(button);
+            if (rowIndex === parseInt(y) && colIndex === parseInt(x)) {
+                updatedButton.setLabel('X').setStyle(ButtonStyle.Danger).setDisabled(true);
+            }
+            newRow.addComponents(updatedButton);
+        });
+        return newRow;
+    });
+
+    await interaction.update({ components: updatedComponents });
+};
 
 module.exports = {
     playGame,

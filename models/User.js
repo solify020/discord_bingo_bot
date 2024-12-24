@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
+    lastBalance: {
+        type: Number,
+        required: true,
+        default: 0
+    },
     publicKey: {
         type: String,
         required: true

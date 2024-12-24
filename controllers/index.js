@@ -1,4 +1,4 @@
-const { createWallet, checkBalance } = require("./depositMethodController");
+const { createWallet, checkBalance, realtimeBalance, replyWithdraw } = require("./depositMethodController");
 const { playGame, startGame, showRoomList, joinRoom, crashRoom, tick } = require('./playGameController')
 
 const chooseMethod = (interaction) => {
@@ -11,8 +11,10 @@ const chooseMethod = (interaction) => {
     if (interaction.customId.includes("__")) return joinRoom(interaction);
     if (interaction.customId === "crash_room") return crashRoomButton(interaction);
     if (interaction.customId.includes('card')) return tick(interaction);
+    if (interaction.customId.includes("withdraw")) return replyWithdraw(interaction);
 }
 
 module.exports = {
-    chooseMethod
+    chooseMethod,
+    realtimeBalance
 }

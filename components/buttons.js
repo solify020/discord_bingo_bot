@@ -1,4 +1,9 @@
-const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js')
+const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+
+const crashRoomButton = new ButtonBuilder()
+    .setCustomId('crash_room')
+    .setLabel('Crash Room')
+    .setStyle(ButtonStyle.Danger);
 
 const createWalletButton = new ButtonBuilder()
     .setCustomId('create_wallet')
@@ -13,11 +18,6 @@ const checkBalanceButton = new ButtonBuilder()
 const playGameButton = new ButtonBuilder()
     .setCustomId('play_game')
     .setLabel('Play Bingo!')
-    .setStyle(ButtonStyle.Primary);
-
-const crashRoomButton = new ButtonBuilder()
-    .setCustomId('crash_room')
-    .setLabel('Crash Room')
     .setStyle(ButtonStyle.Primary);
 
 const showListButton = new ButtonBuilder()
@@ -48,17 +48,17 @@ const btnBet1 = new ButtonBuilder()
 const btnBet2 = new ButtonBuilder()
     .setCustomId('bet_2')
     .setLabel('2 SOL')
-    .setStyle(ButtonStyle.Primary);
+    .setStyle(ButtonStyle.Success);
 
 const btnBet5 = new ButtonBuilder()
     .setCustomId('bet_5')
     .setLabel('5 SOL')
-    .setStyle(ButtonStyle.Primary);
+    .setStyle(ButtonStyle.Success);
 
 const btnBet10 = new ButtonBuilder()
     .setCustomId('bet_10')
     .setLabel('10 SOL')
-    .setStyle(ButtonStyle.Primary);
+    .setStyle(ButtonStyle.Danger);
 
 const betAmountButton_1 = new ActionRowBuilder()
     .addComponents(btnBet0_1, btnBet0_2, btnBet0_5, btnBet1);
@@ -66,7 +66,20 @@ const betAmountButton_1 = new ActionRowBuilder()
 const betAmountButton_2 = new ActionRowBuilder()
     .addComponents(btnBet2, btnBet5, btnBet10);
 
+const withdrawButton = new ButtonBuilder()
+    .setCustomId('withdraw')
+    .setLabel('Withdraw')
+    .setStyle(ButtonStyle.Primary);
 
+const maxButton = new ButtonBuilder()
+    .setCustomId('max_withdraw')
+    .setLabel('Max')
+    .setStyle(ButtonStyle.Primary);
+
+const withdrawBtn = new ButtonBuilder()
+    .setCustomId('withdraw_btn')
+    .setLabel('Withdraw')
+    .setStyle(ButtonStyle.Success);
 
 module.exports = {
     createWalletButton,
@@ -75,5 +88,7 @@ module.exports = {
     crashRoomButton,
     showListButton,
     betAmountButton_1,
-    betAmountButton_2
+    betAmountButton_2,
+    crashRoomButton,
+    withdrawButton
 }
