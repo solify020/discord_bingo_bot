@@ -5,10 +5,15 @@ const crashRoomButton = new ButtonBuilder()
     .setLabel('Crash Room')
     .setStyle(ButtonStyle.Danger);
 
-const createWalletButton = new ButtonBuilder()
-    .setCustomId('create_wallet')
-    .setLabel('Create Wallet')
+const depositButton = new ButtonBuilder()
+    .setCustomId('deposit')
+    .setLabel('Deposit')
     .setStyle(ButtonStyle.Primary);
+
+const confirmDepositButton = new ButtonBuilder()
+    .setCustomId('confirm_deposit')
+    .setLabel('Confirm')
+    .setStyle(ButtonStyle.Success);
 
 const checkBalanceButton = new ButtonBuilder()
     .setCustomId('check_balance')
@@ -81,8 +86,14 @@ const withdrawBtn = new ButtonBuilder()
     .setLabel('Withdraw')
     .setStyle(ButtonStyle.Success);
 
+const readyButton = new ButtonBuilder()
+    .setCustomId('ready')
+    .setLabel('Ready')
+    .setStyle(ButtonStyle.Success);
+
 module.exports = {
-    createWalletButton,
+    // createWalletButton,
+    depositButton,
     checkBalanceButton,
     playGameButton,
     crashRoomButton,
@@ -90,5 +101,7 @@ module.exports = {
     betAmountButton_1,
     betAmountButton_2,
     crashRoomButton,
-    withdrawButton
+    withdrawButton,
+    readyButton,
+    confirmDepositButton
 }

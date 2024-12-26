@@ -20,12 +20,9 @@ const userSchema = new mongoose.Schema({
     score: {
         type: Number,
         required: true,
-        default: 0
-    },
-    lastBalance: {
-        type: Number,
-        required: true,
-        default: 0
+        default: 0.00,
+        get: v => parseFloat(v.toFixed(2)),
+        set: v => parseFloat(v.toFixed(2))
     },
     publicKey: {
         type: String,

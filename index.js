@@ -1,7 +1,7 @@
 // Import the discord.js library
 const { Client, GatewayIntentBits, ActionRowBuilder } = require('discord.js');
-const { createWalletButton, checkBalanceButton, playGameButton, showListButton, withdrawButton } = require('./components/buttons');
-const { chooseMethod, realtimeBalance } = require('./controllers/index');
+const { depositButton, checkBalanceButton, playGameButton, showListButton, withdrawButton } = require('./components/buttons');
+const { chooseMethod } = require('./controllers/index');
 const { welcomeEmbed } = require('./components/embeds');
 
 const mongoose = require('mongoose');
@@ -27,13 +27,11 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     const channel = client.channels.cache.get(process.env.CHANNEL_ID);
 
-    const row = new ActionRowBuilder().addComponents(createWalletButton).addComponents(checkBalanceButton).addComponents(withdrawButton).addComponents(playGameButton).addComponents(showListButton);
+    const row = new ActionRowBuilder().addComponents(depositButton).addComponents(checkBalanceButton).addComponents(withdrawButton).addComponents(playGameButton).addComponents(showListButton);
     channel.send({ embeds: [welcomeEmbed] });
     channel.send({
-        content: '💳                                💰                  📤                 🅱️                   🏠',
         components: [row],
     })
-    setInterval(realtimeBalance, 10000);
 });
 
 // Message event - triggered when a message is sent in a guild
@@ -44,7 +42,7 @@ client.on('messageCreate', async(message) => {
 
     const channel = client.channels.cache.get(process.env.CHANNEL_ID);
 
-    const row = new ActionRowBuilder().addComponents(createWalletButton);
+    // const row = new ActionRowBuilder().addComponents(createWalletButton);
 
     if (message.content === '!ping') {
         await channel.send({
@@ -55,8 +53,7 @@ client.on('messageCreate', async(message) => {
 });
 
 client.on('interactionCreate', async(interaction) => {
-    if (!interaction.isButton()) return;
-    chooseMethod(interaction)
+    chooseMethod(interaction);
 });
 
 // Login to Discord with your bot token

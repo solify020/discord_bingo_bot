@@ -27,6 +27,6 @@ const welcomeEmbed = new EmbedBuilder()
     })
     .setImage('https://media.istockphoto.com/id/1487068767/vector/bingo-lottery-balls-and-tickets-background.jpg?s=612x612&w=0&k=20&c=teWqm9arf4w-iOwClpjwj1tfj28IhmsVI8yQxK3vkeQ=')
     // .setTimestamp()
-    .setFooter({ text: 'Have fun and good luck!', iconURL: 'https://i.imgur.com/wSTFkRM.png' });
+    .setFooter({ text: 'Have fun and good luck!', iconURL: 'https://www.svgrepo.com/show/315910/billiard-ball.svg' });
 
 module.exports = { welcomeEmbed };

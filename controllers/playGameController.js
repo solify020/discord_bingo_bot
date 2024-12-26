@@ -1,5 +1,5 @@
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, TextChannel, ChannelType, PermissionsBitField, ChannelFlagsBitField } = require("discord.js")
-const { betAmountButton_1, betAmountButton_2 } = require("../components/buttons")
+const { betAmountButton_1, betAmountButton_2, readyButton } = require("../components/buttons")
 const { create5x5Table, bingoCheck, generateBingoBalls } = require("./utilController");
 const User = require('../models/User');
 const Room = require('../models/Room');
@@ -141,7 +141,38 @@ const joinRoom = async(interaction) => {
         ephemeral: true
     });
     setTimeout(() => { interaction.deleteReply() }, 5000);
-    startBingo(interaction, channel);
+    const row = new ActionRowBuilder().addComponents(readyButton);
+    channel.send({
+        content: 'Click "Ready" if you are ready.',
+        components: [row]
+    })
+}
+
+const ready = async(interaction) => {
+    const channel = interaction.channel;
+    if (!ball[channel.id]) {
+        ball[channel.id] = {}; // Create an object for the channel ID
+    }
+    if (ball[channel.id]['isReady'] == interaction.user.id) {
+        await interaction.reply({
+            content: "Already been ready.",
+            ephemeral: true
+        });
+        return setTimeout(() => { interaction.deleteReply() }, 3000);
+    }
+    if (ball[channel.id]['isReady']) {
+        await interaction.reply({
+            content: "Both players are ready. Game will be started in a second.",
+        });
+        setTimeout(() => { interaction.deleteReply() }, 5000);
+        return startBingo(interaction, channel)
+    }
+    ball[channel.id]['isReady'] = interaction.user.id;
+    await interaction.reply({
+        content: "You are ready.",
+        ephemeral: true
+    });
+    setTimeout(() => { interaction.deleteReply() }, 3000);
 }
 
 const showRoomList = async(interaction) => {
@@ -181,7 +212,7 @@ const showRoomList = async(interaction) => {
 }
 
 const startBingo = async(interaction, channel) => {
-    const gameRoom = await Room.findOne({ roomId: interaction.customId.split('__')[0] });
+    const gameRoom = await Room.findOne({ roomId: channel.id });
     const player1 = await User.findOne({ userId: gameRoom.user_1_id });
     const player2 = await User.findOne({ userId: gameRoom.user_2_id });
     const player1Name = player1.displayName;
@@ -192,10 +223,8 @@ const startBingo = async(interaction, channel) => {
     const bingoBalls = generateBingoBalls();
     const rows_1 = [];
     const rows_2 = [];
-    if (!ball[channel.id]) {
-        ball[channel.id] = {}; // Create an object for the channel ID
-        ball[channel.id]['currentBall'] = [];
-    }
+    ball[channel.id]['currentBall'] = [];
+
     player1_table.map((item, index_y) => {
         const row = new ActionRowBuilder();
         item.map((number, index_x) => {
@@ -243,6 +272,10 @@ const startBingo = async(interaction, channel) => {
         var currentBallIndex = 0;
         gameMsg.edit('The game has started. Balls pop out every 5 seconds.');
         const randomBall = setInterval(() => {
+            if (!channel) {
+                clearInterval(randomBall);
+                return Room.findOneAndUpdate({ roomId: channel.id }, { isFinished: true });
+            }
             if (ball[channel.id]['winner'] || currentBallIndex >= 75) {
                 setTimeout(() => { channel.delete().catch(console.error) }, 3000)
                 return clearInterval(randomBall);
@@ -292,6 +325,7 @@ const tick = async(interaction) => {
         ball[channel.id]['winner'] = `player${player}`;
         await channel.send(`Bingo! The game has ended. Player ${player} is the winner!`);
         await User.findOneAndUpdate({ userId: interaction.user.id }, { $inc: { score: room.betAmount * 1.8 } });
+        await Room.findOneAndDelete({ roomId: channel.id });
         setTimeout(() => {
             channel.delete().catch(console.error);
         }, 3000);
@@ -336,5 +370,6 @@ module.exports = {
     showRoomList,
     joinRoom,
     crashRoom,
-    tick
+    tick,
+    ready
 }
